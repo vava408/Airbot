@@ -1,0 +1,17 @@
+{
+  "name": "airbot",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "vava4859",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7",
+    "fs": "^0.0.1-security"
+  }
+}

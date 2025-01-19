@@ -1,0 +1,7 @@
+module.exports = {
+    name: "nom ede l event",
+    once: true, // Cet événement est écouté une seule fois si il est true en continue si false
+    run(client) {
+        console.log(`${client.user.tag} est prêt !`);
+    },
+};
