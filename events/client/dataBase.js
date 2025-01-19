@@ -35,5 +35,6 @@ module.exports = {
         if (!channelTable['count(*)']) {
        		sql.prepare("CREATE TABLE channel (guild TEXT PRIMARY KEY, channel TEXT);").run();
         };
+		
 	},
 };
