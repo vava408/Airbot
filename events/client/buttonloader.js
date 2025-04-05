@@ -2,30 +2,25 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = {
-    name: "nom de l'event",
-    once: false, // Cet événement est écouté une seule fois si il est true en continue si false
-    run(client) {
-        const buttonDir = path.join(__dirname, 'button');
+	name: "ready", // L'événement doit être lié à "ready" pour charger les boutons au démarrage
+	once: true, // Charger les boutons une seule fois
+	run(client) {
+		const buttonDir = path.join(__dirname, '../../button');
 
-        function loadButtons() {
-            const buttons = {};
+		function loadButtons() {
+			const buttons = {};
 
-            fs.readdirSync(buttonDir).forEach(subDir => {
-                const subDirPath = path.join(buttonDir, subDir);
-                if (fs.lstatSync(subDirPath).isDirectory()) {
-                    fs.readdirSync(subDirPath).forEach(file => {
-                        if (file.endsWith('.js')) {
-                            const button = require(path.join(subDirPath, file));
-                            buttons[button.name] = button;
-                            console.log(`[Button] => ${button.name} bouton chargé depuis ${path.join(subDirPath, file)}`);
-                        }
-                    });
-                }
-            });
+			fs.readdirSync(buttonDir).forEach(file => {
+				if (file.endsWith('.js')) {
+					const button = require(path.join(buttonDir, file));
+					buttons[button.name] = button;
+					console.log(`[Button] => ${button.name} bouton chargé `);
+				}
+			});
 
-            return buttons;
-        }
+			return buttons;
+		}
 
-        client.buttons = loadButtons();
-    },
+		client.buttons = loadButtons();
+	},
 };
