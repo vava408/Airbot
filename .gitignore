@@ -30,4 +30,5 @@ dist/
 build/
 
 
-.sqlite
+*.sqlite
+connexion.js

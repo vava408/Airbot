@@ -1,119 +1,81 @@
 const Database = require('better-sqlite3');
 const sql = new Database('./database.sqlite');
 const talkedRecently = new Map();
-const Discord = require("discord.js")
+const Discord = require("discord.js");
 
 module.exports = {
-	name: "messageCreate",
-	once: false, // Cet événement est écouté en continu
-	run(client, message) {
-		if (message.author.bot) return;
-		if (!message.guild) return;
-		let blacklistUser = sql.prepare("SELECT id FROM blacklistTable WHERE guild = ? AND id = ?").get(message.guild.id, `${message.guild.id}-${message.author.id}`);
-		let blacklistChannel = sql.prepare("SELECT id FROM blacklistTable WHERE guild = ? AND id = ?").get(message.guild.id, `${message.guild.id}-${message.channel.id}`);
-		if (blacklistUser || blacklistChannel) return;
+    name: "messageCreate",
+    once: false, // Cet événement est écouté en continu
+    run(client, message) {
+        if (message.author.bot || !message.guild) return;
 
+        // Vérifiez si l'utilisateur ou le canal est blacklisté
+        const blacklistUser = sql.prepare("SELECT id FROM blacklistTable WHERE guild = ? AND id = ?").get(message.guild.id, `${message.guild.id}-${message.author.id}`);
+        const blacklistChannel = sql.prepare("SELECT id FROM blacklistTable WHERE guild = ? AND id = ?").get(message.guild.id, `${message.guild.id}-${message.channel.id}`);
+        if (blacklistUser || blacklistChannel) return;
 
+        // Récupérez ou initialisez les données de niveau
+        let level = sql.prepare("SELECT * FROM levels WHERE user = ? AND guild = ?").get(message.author.id, message.guild.id);
+        if (!level) {
+            level = {
+                id: `${message.author.id}-${message.guild.id}`,
+                user: message.author.id,
+                guild: message.guild.id,
+                xp: 0,
+                level: 0,
+                totalXP: 0,
+            };
+            sql.prepare("INSERT INTO levels (id, user, guild, xp, level, totalXP) VALUES (@id, @user, @guild, @xp, @level, @totalXP)").run(level);
+        }
 
-		// get level and set level
-		const level = client.getLevel.get(message.author.id, message.guild.id)
-		if (!level) {
-			let insertLevel = sql.prepare("INSERT OR REPLACE INTO levels (id, user, guild, xp, level, totalXP) VALUES (?,?,?,?,?,?);");
-			insertLevel.run(`${message.author.id}-${message.guild.id}`, message.author.id, message.guild.id, 0, 0, 0)
-			return;
-		}
+        // Récupérez les paramètres personnalisés ou utilisez les valeurs par défaut
+        const customSettings = sql.prepare("SELECT * FROM settings WHERE guild = ?").get(message.guild.id);
+        const xpGain = customSettings?.customXP || 16; // XP par défaut
+        const cooldown = customSettings?.customCooldown || 10000; // Cooldown par défaut (10 secondes)
 
-		let customSettings = sql.prepare("SELECT * FROM settings WHERE guild = ?").get(message.guild.id);
-		let channelLevel = sql.prepare("SELECT * FROM channel WHERE guild = ?").get(message.guild.id);
+        // Système de gain d'XP
+        if (talkedRecently.has(message.author.id)) return;
 
-		const lvl = level.level;
+        const generatedXp = Math.floor(Math.random() * xpGain);
+        const nextXP = level.level * 2 * 100 + 150;
 
-		let getXpfromDB;
-		let getCooldownfromDB;
+        level.xp += generatedXp;
+        level.totalXP += generatedXp;
 
-		if (!customSettings) {
-			getXpfromDB = 16; // Default
-			getCooldownfromDB = 1000;
-		} else {
-			getXpfromDB = customSettings.customXP;
-			getCooldownfromDB = customSettings.customCooldown;
-		}
+        // Vérifiez si l'utilisateur monte de niveau
+        if (level.xp >= nextXP) {
+            level.xp = 0;
+            level.level += 1;
 
-		// xp system
-		const generatedXp = Math.floor(Math.random() * getXpfromDB);
-		const nextXP = level.level * 2 * 100 + 150
-		// message content or characters length has to be more than 4 characters also cooldown
-		if (talkedRecently.get(message.author.id)) {
-			return;
-		} else { // cooldown is 10 seconds
-			level.xp += generatedXp;
-			level.totalXP += generatedXp;
+            const embed = new Discord.EmbedBuilder()
+                .setColor("Random")
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setDescription(`**Bravo** ${message.author}! Vous êtes maintenant **niveau ${level.level}** !`)
+                .setTimestamp();
 
+            const channelLevel = sql.prepare("SELECT * FROM channel WHERE guild = ?").get(message.guild.id);
+            const targetChannel = channelLevel?.channel ? message.guild.channels.cache.get(channelLevel.channel) : message.channel;
 
-			// level up!
-			if (level.xp >= nextXP) {
-				level.xp = 0;
-				level.level += 1;
+            try {
+                targetChannel.send({ embeds: [embed] });
+            } catch (err) {
+                console.error("Erreur lors de l'envoi du message de niveau :", err);
+            }
+        }
 
-				let levelUpMsg;
-				let embed = new Discord.EmbedBuilder()
-					.setColor("Random")
-					.setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-					.setTimestamp();
+        // Mettez à jour les données de niveau dans la base de données
+        sql.prepare("UPDATE levels SET xp = ?, level = ?, totalXP = ? WHERE id = ?").run(level.xp, level.level, level.totalXP, level.id);
 
-				if (!customSettings) {
-					embed.setDescription(`**Bravo** ${message.author}! Vous etes maintenant  **level ${level.level}**`);
-					levelUpMsg = `**Bravo** ${message.author}!  Vous etes maintenant  passer au  **level ${level.level}**`;
-				} else {
-					function antonymsLevelUp(string) {
-						return string
-							.replace(/{member}/i, `${message.member}`)
-							.replace(/{xp}/i, `${level.xp}`)
-							.replace(/{level}/i, `${level.level}`)
-					}
-					embed.setDescription(antonymsLevelUp(customSettings.levelUpMessage.toString()));
-					levelUpMsg = antonymsLevelUp(customSettings.levelUpMessage.toString());
-				}
-				// using try catch if bot have perms to send EMBED_LINKS      
-				try {
-					if (!channelLevel || channelLevel.channel == "Default") {
-						message.channel.send({ embeds: [embed] });
-					} else {
-						let channel = message.guild.channels.cache.get(channelLevel.channel)
-						const permissionFlags = channel.permissionsFor(message.guild.me);
-						if (!permissionFlags.has("SEND_MESSAGES") || !permissionFlags.has("VIEW_CHANNEL")) return;
-						channel.send({ embeds: [embed] });
-					}
-				} catch (err) {
-					if (!channelLevel || channelLevel.channel == "Default") {
-						message.channel.send({ embeds: [embed] });
-					} else {
-						let channel = message.guild.channels.cache.get(channelLevel.channel)
-						channel.send({ embeds: [embed] })
-					}
-				}
-			};
-			client.setLevel.run(level);
-			// add cooldown to user
-			talkedRecently.set(message.author.id, Date.now() + getCooldownfromDB);
-			setTimeout(() => talkedRecently.delete(message.author.id, Date.now() + getCooldownfromDB))
-		}
-		// level up, time to add level roles
-		const member = message.member;
-		let Roles = sql.prepare("SELECT * FROM roles WHERE guildID = ? AND level = ?")
+        // Ajoutez un cooldown pour éviter les abus
+        talkedRecently.set(message.author.id, Date.now() + cooldown);
+        setTimeout(() => talkedRecently.delete(message.author.id), cooldown);
 
-		let roles = Roles.get(message.guild.id, lvl)
-		if (!roles) return;
-		if (lvl >= roles.level) {
-			if (roles) {
-				if (member.roles.cache.get(roles.roleID)) {
-					return;
-				}
-				if (!message.guild.me.hasPermission("MANAGE_ROLES")) {
-					return
-				}
-				member.roles.add(roles.roleID);
-			}
-		}
-	},
+        // Gestion des rôles en fonction du niveau
+        const roles = sql.prepare("SELECT * FROM roles WHERE guildID = ? AND level = ?").get(message.guild.id, level.level);
+        if (roles && !message.member.roles.cache.has(roles.roleID)) {
+            if (message.guild.me.permissions.has("ManageRoles")) {
+                message.member.roles.add(roles.roleID).catch(err => console.error("Erreur lors de l'ajout du rôle :", err));
+            }
+        }
+    },
 };
