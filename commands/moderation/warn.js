@@ -3,7 +3,7 @@ const Discord = require('discord.js');
 
 module.exports = {
 	name: 'warn',
-	description: 'Avertit un utilisateur.',
+	description: 'Avertit un utilisateur ajouter une reason si vous le voulez apres la mention. "!warn @utilisateur + reason".',
 	execute(message, args) {
 		// Vérifiez les permissions
 		if (!message.member.permissions.has(Discord.PermissionFlagsBits.ManageMessages)) {

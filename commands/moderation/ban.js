@@ -3,7 +3,7 @@ const Discord = require('discord.js');
 
 module.exports = {
 	name: 'ban', // Nom de la commande
-	description: 'Ban un utilisateur.', // Description de la commande
+	description: 'Ban un utilisateur ajouter une reason si vous le voulez apres la mention. "!ban @utilisateur + reason" ', // Description de la commande
 	async execute(message, args) {
 		// Vérifiez les permissions de l'utilisateur qui exécute la commande
 		if (!message.member.permissions.has(Discord.PermissionFlagsBits.BanMembers)) {
