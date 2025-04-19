@@ -2,8 +2,8 @@ const db = require('../../connexion.js'); // Importez la connexion à la base de
 const Discord = require('discord.js');
 
 module.exports = {
-	name: 'ban', // Nom de la commande
-	description: 'Ban un utilisateur ajouter une reason si vous le voulez apres la mention. "!ban @utilisateur + reason" ', // Description de la commande
+	name: 'slot', // Nom de la commande
+	description: 'Joue à la machine à sous ! ', // Description de la commande
 	async execute(message, args) {
 		const slots = ['🍒', '🍋', '🍉', '🍇', '🔔', '⭐', '💎'];
 		const slot1 = slots[Math.floor(Math.random() * slots.length)];
