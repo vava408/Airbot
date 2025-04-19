@@ -16,7 +16,19 @@ module.exports = {
 				{
 					name: '⚠️ `!warn @utilisateur [raison]`',
 					value: 'Avertit un utilisateur mentionné avec une raison facultative.',
-				}
+				},
+				{
+					name: '⚠️ `!mute @utilisateur temps en minutes [raison]`',
+					value: 'mute un utilisateur mentionné avec une raison facultative.',
+				},
+				{
+					name: '⚠️ `!infomute `',
+					value: 'Affiche les mutes d\'un utilisateur ou de tout le serveur. Utilisation : "!infomute [@utilisateur]',
+				},
+				{
+					name: '⚠️ `!infowarn',
+					value: 'Affiche les warn d\'un utilisateur ou de tout le serveur. Utilisation : "!infowarn [@utilisateur]',
+				},
 			)
 			.setFooter({
 				text: 'AirBot - Modération',
