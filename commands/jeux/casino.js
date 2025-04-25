@@ -11,20 +11,20 @@ module.exports = {
 		const slot3 = slots[Math.floor(Math.random() * slots.length)];
 
 		const result = `${slot1} | ${slot2} | ${slot3}`;
-		let message = '';
+		let messages = '';
 
 		if (slot1 === slot2 && slot2 === slot3) {
-			message = '🎉 JACKPOT ! T’as gagné 🎉';
+			messages = '🎉 JACKPOT ! T’as gagné 🎉';
 		} else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
-			message = '✨ Pas mal ! Deux symboles identiques. Petit gain !';
+			messages = '✨ Pas mal ! Deux symboles identiques. Petit gain !';
 		} else {
-			message = '💀 Perdu... Retente ta chance !';
+			messages = '💀 Perdu... Retente ta chance !';
 		}
 
 		const embed = new EmbedBuilder()
 			.setColor('#FFD700')
 			.setTitle('🎰 Machine à sous 🎰')
-			.setDescription(`🎲 Résultat :\n**${result}**\n\n${message}`);
+			.setDescription(`🎲 Résultat :\n**${result}**\n\n${messages}`);
 
 		await interaction.reply({ embeds: [embed] });
 	},
