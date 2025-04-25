@@ -1,21 +1,30 @@
-const Database = require('better-sqlite3');
-const sql = new Database('./database.sqlite');
+const db = require('../../connexion.js');
 const talkedRecently = new Map();
 const Discord = require("discord.js");
 
 module.exports = {
     name: "messageCreate",
     once: false, // Cet événement est écouté en continu
-    run(client, message) {
+    async run(client, message) {
         if (message.author.bot || !message.guild) return;
 
         // Vérifiez si l'utilisateur ou le canal est blacklisté
-        const blacklistUser = sql.prepare("SELECT id FROM blacklistTable WHERE guild = ? AND id = ?").get(message.guild.id, `${message.guild.id}-${message.author.id}`);
-        const blacklistChannel = sql.prepare("SELECT id FROM blacklistTable WHERE guild = ? AND id = ?").get(message.guild.id, `${message.guild.id}-${message.channel.id}`);
-        if (blacklistUser || blacklistChannel) return;
+        const [blacklistUser] = await db.promise().query(
+            "SELECT id FROM blacklistTable WHERE guild = ? AND id = ?",
+            [message.guild.id, `${message.guild.id}-${message.author.id}`]
+        );
+        const [blacklistChannel] = await db.promise().query(
+            "SELECT id FROM blacklistTable WHERE guild = ? AND id = ?",
+            [message.guild.id, `${message.guild.id}-${message.channel.id}`]
+        );
+        if (blacklistUser.length > 0 || blacklistChannel.length > 0) return;
 
         // Récupérez ou initialisez les données de niveau
-        let level = sql.prepare("SELECT * FROM levels WHERE user = ? AND guild = ?").get(message.author.id, message.guild.id);
+        const [levels] = await db.promise().query(
+            "SELECT * FROM levels WHERE user = ? AND guild = ?",
+            [message.author.id, message.guild.id]
+        );
+        let level = levels[0];
         if (!level) {
             level = {
                 id: `${message.author.id}-${message.guild.id}`,
@@ -25,11 +34,18 @@ module.exports = {
                 level: 0,
                 totalXP: 0,
             };
-            sql.prepare("INSERT INTO levels (id, user, guild, xp, level, totalXP) VALUES (@id, @user, @guild, @xp, @level, @totalXP)").run(level);
+            await db.promise().query(
+                "INSERT INTO levels (id, user, guild, xp, level, totalXP) VALUES (?, ?, ?, ?, ?, ?)",
+                [level.id, level.user, level.guild, level.xp, level.level, level.totalXP]
+            );
         }
 
         // Récupérez les paramètres personnalisés ou utilisez les valeurs par défaut
-        const customSettings = sql.prepare("SELECT * FROM settings WHERE guild = ?").get(message.guild.id);
+        const [settingsRows] = await db.promise().query(
+            "SELECT * FROM settings WHERE guild = ?",
+            [message.guild.id]
+        );
+        const customSettings = settingsRows[0];
         const xpGain = customSettings?.customXP || 16; // XP par défaut
         const cooldown = customSettings?.customCooldown || 10000; // Cooldown par défaut (10 secondes)
 
@@ -53,7 +69,11 @@ module.exports = {
                 .setDescription(`**Bravo** ${message.author}! Vous êtes maintenant **niveau ${level.level}** !`)
                 .setTimestamp();
 
-            const channelLevel = sql.prepare("SELECT * FROM channel WHERE guild = ?").get(message.guild.id);
+            const [channelRows] = await db.promise().query(
+                "SELECT * FROM channel WHERE guild = ?",
+                [message.guild.id]
+            );
+            const channelLevel = channelRows[0];
             const targetChannel = channelLevel?.channel ? message.guild.channels.cache.get(channelLevel.channel) : message.channel;
 
             try {
@@ -64,16 +84,23 @@ module.exports = {
         }
 
         // Mettez à jour les données de niveau dans la base de données
-        sql.prepare("UPDATE levels SET xp = ?, level = ?, totalXP = ? WHERE id = ?").run(level.xp, level.level, level.totalXP, level.id);
+        await db.promise().query(
+            "UPDATE levels SET xp = ?, level = ?, totalXP = ? WHERE id = ?",
+            [level.xp, level.level, level.totalXP, level.id]
+        );
 
         // Ajoutez un cooldown pour éviter les abus
         talkedRecently.set(message.author.id, Date.now() + cooldown);
         setTimeout(() => talkedRecently.delete(message.author.id), cooldown);
 
         // Gestion des rôles en fonction du niveau
-        const roles = sql.prepare("SELECT * FROM roles WHERE guildID = ? AND level = ?").get(message.guild.id, level.level);
+        const [rolesRows] = await db.promise().query(
+            "SELECT * FROM roles WHERE guildID = ? AND level = ?",
+            [message.guild.id, level.level]
+        );
+        const roles = rolesRows[0];
         if (roles && !message.member.roles.cache.has(roles.roleID)) {
-            if (message.guild.me.permissions.has("ManageRoles")) {
+            if (message.guild.members.me.permissions.has("ManageRoles")) {
                 message.member.roles.add(roles.roleID).catch(err => console.error("Erreur lors de l'ajout du rôle :", err));
             }
         }
