@@ -3,7 +3,7 @@ const Discord = require('discord.js');
 
 module.exports = {
 	name: 'infoserv', 
-	description: 'Joue à la machine à sous ! ', 
+	description: 'Affiche es informations du sevrveur ! ', 
 	async execute(message, args) {
 
 		const embed = new Discord.EmbedBuilder()

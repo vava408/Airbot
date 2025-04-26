@@ -31,8 +31,14 @@ module.exports = {
 			.setEmoji('⛔')
 			.setStyle(Discord.ButtonStyle.Danger);
 
+		const informations = new Discord.ButtonBuilder()
+			.setCustomId('informations')
+			.setLabel('Informations')
+			.setEmoji('ℹ️')
+			.setStyle(Discord.ButtonStyle.Secondary);
+
 		const row = new Discord.ActionRowBuilder()
-			.addComponents(accueil, moderation);
+			.addComponents(accueil, moderation, informations);
 
 		message.channel.send({
 			embeds: [embed],

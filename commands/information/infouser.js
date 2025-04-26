@@ -3,8 +3,8 @@ const db = require('../../connexion.js');
 const Discord = require('discord.js');
 
 module.exports = {
-	name: 'infoserv', 
-	description: 'Joue à la machine à sous ! ', 
+	name: 'infouser', 
+	description: 'Affiche es informations de l utilisateur  !', 
 	async execute(message, args) {
 
 		const username = message.mentions.members.first() || message.member;
