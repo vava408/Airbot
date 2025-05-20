@@ -3,8 +3,8 @@ const Discord = require('discord.js');
 
 module.exports = {
 	name: 'levelup',
-	description: 'Permet de modifier le message, le salon ou le rôle de level up',
-	usage: 'levelup <message> [salon] [role]',
+	description: 'Permet de modifier le message de level up',
+	usage: 'levelup <message>',
 	async execute(message, args, client) {
 		if (!message.member.permissions.has('ADMINISTRATOR')) {
 			return message.reply('Vous devez être administrateur pour utiliser cette commande.');
@@ -14,61 +14,41 @@ module.exports = {
 			return message.reply(`Veuillez fournir un message de niveau supérieur !\nExemple : \`Bravo {member}, vous avez passé 1 niveau, vous êtes niveau {level} et vous avez {xp} !\``);
 		}
 
-		client.getLevel = sql.prepare("SELECT * FROM levels WHERE user = ? AND guild = ?");
-		const level = client.getLevel.get(message.author.id, message.guild.id);
+		// Récupère le niveau de l'utilisateur
+		const [levels] = await db.promise().query(
+			"SELECT * FROM levels WHERE user = ? AND guild = ?",
+			[message.author.id, message.guild.id]
+		);
+		
+		const level = levels[0];
 		if (!level) {
-			let insertLevel = sql.prepare("INSERT OR REPLACE INTO levels (id, user, guild, xp, level, totalXP) VALUES (?,?,?,?,?,?);");
-			insertLevel.run(`${message.author.id}-${message.guild.id}`, message.author.id, message.guild.id, 0, 0, 0);
-			return;
+			await db.promise().query(
+				"INSERT or UPDATE INTO settings (guild, levelUpMessage, customXP, customCooldown) VALUES (?, ?, ?, ?, ?, ?)",
+				[message.guild.id, message.author.id, message.guild.id, 0, 0, 0]
+			);
+			return message.reply("Niveau initialisé, veuillez réessayer la commande.");
 		}
-
-		let embed = new Discord.EmbedBuilder()
-			.setColor("Random")
-			.setTimestamp();
 
 		function remplacerVariables(string) {
 			return string
-				.replace(/{member}/i, `${message.member}`)
-				.replace(/{xp}/i, `${level.xp}`)
-				.replace(/{level}/i, `${level.level}`);
+				.replace(/{member}/gi, `${message.member}`)
+				.replace(/{xp}/gi, `${level.xp}`)
+				.replace(/{level}/gi, `${level.level}`);
 		}
 
-		// Extraire les arguments pour le message, le salon et le rôle
-		const messageContent = args[0];
-		const channelMention = message.mentions.channels.first();
-		const roleMention = message.mentions.roles.first();
+		const messageContent = args.join(" ");
 
-		embed.setDescription(remplacerVariables(messageContent));
+		// Enregistre le message personnalisé dans la base de données
+		await db.promise().query(
+			"INSERT INTO settings (guild, levelUpMessage) VALUES (?, ?) ON DUPLICATE KEY UPDATE levelUpMessage = ?",
+			[message.guild.id, messageContent, messageContent]
+		);
 
-		// Vérifier si une configuration existe déjà pour le salon
-		let checkChannel = sql.prepare("SELECT * FROM channellguild WHERE guildID = ?").get(message.guild.id);
-		if (channelMention) {
-			if (checkChannel) {
-				sql.prepare("UPDATE channellguild SET channel = ? WHERE guildID = ?")
-					.run(channelMention.id, message.guild.id);
-			} else {
-				sql.prepare("INSERT INTO channellguild (guildID, channel) VALUES (?, ?)")
-					.run(message.guild.id, channelMention.id);
-			}
-		}
+		const embed = new Discord.EmbedBuilder()
+			.setColor("Random")
+			.setTimestamp()
+			.setDescription(remplacerVariables(messageContent));
 
-		// Vérifier si une configuration existe déjà pour le rôle
-		let checkRole = sql.prepare("SELECT * FROM roles WHERE guildID = ? AND level = ?").get(message.guild.id, level.level);
-		if (roleMention) {
-			if (checkRole) {
-				sql.prepare("UPDATE roles SET roleID = ? WHERE guildID = ? AND level = ?")
-					.run(roleMention.id, message.guild.id, level.level);
-			} else {
-				sql.prepare("INSERT INTO roles (guildID, roleID, level) VALUES (?, ?, ?)")
-					.run(message.guild.id, roleMention.id, level.level);
-			}
-		}
-
-		// Envoyer un message de confirmation
-		let confirmationMessage = `Le message de level up a été mis à jour : ${remplacerVariables(messageContent)}`;
-		if (channelMention) confirmationMessage += `\nSalon défini : ${channelMention}`;
-		if (roleMention) confirmationMessage += `\nRôle défini pour le niveau ${level.level} : ${roleMention}`;
-
-		return message.channel.send({ content: confirmationMessage, embeds: [embed] });
+		return message.channel.send({ content: `Le message de level up a été mis à jour : ${remplacerVariables(messageContent)}`, embeds: [embed] });
 	}
 };
