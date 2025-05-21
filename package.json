@@ -17,4 +17,7 @@
     "sqlite3": "^5.1.7",
     "undici": "^6.21.3"
   }
+    "overrides": {
+    "undici": "^6.21.2"
+  }
 }
