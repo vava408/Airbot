@@ -1,23 +1,16 @@
 {
-  "name": "airbot",
-  "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "vava4859",
-  "license": "ISC",
-  "dependencies": {
-    "better-sqlite3": "^11.9.1",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.7",
-    "fs": "^0.0.1-security",
-    "mysql2": "^3.14.0",
-    "sqlite3": "^5.1.7",
-    "undici": "^6.21.3"
-  },
-    "overrides": {
-    "undici": "^6.21.2"
-  }
+	"name": "airbot",
+	"version": "0.0.1",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "vava4859",
+	"license": "ISC",
+	"dependencies": {
+		"discord.js": "^14.20.0",
+		"dotenv": "^16.5.0",
+		"mysql2": "^3.14.1"
+	}
 }
