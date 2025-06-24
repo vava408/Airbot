@@ -30,23 +30,37 @@ module.exports = {
 		let muteRole = message.guild.roles.cache.find(role => role.name === 'Muted');
 		if (!muteRole) {
 			try {
+				// Crée le rôle Muted
 				muteRole = await message.guild.roles.create({
 					name: 'Muted',
 					color: '#808080',
 					permissions: []
 				});
 
-				// Appliquez les permissions pour chaque canal
-				message.guild.channels.cache.forEach(async (channel) => {
-					await channel.permissionOverwrites.create(muteRole, {
+				// Place le rôle Muted juste sous le rôle le plus haut du bot
+				const botRole = message.guild.members.me.roles.highest;
+				await muteRole.setPosition(botRole.position - 1);
+
+				// Applique les permissions pour chaque salon
+				for (const channel of message.guild.channels.cache.values()) {
+					await channel.permissionOverwrites.edit(muteRole, {
 						SendMessages: false,
 						Speak: false,
 						AddReactions: false
 					});
-				});
+				}
 			} catch (err) {
 				console.error('Erreur lors de la création du rôle Muted :', err);
 				return message.reply('Une erreur s\'est produite lors de la création du rôle Muted.');
+			}
+		} else {
+			// S'assure que le rôle Muted a bien les permissions refusées partout
+			for (const channel of message.guild.channels.cache.values()) {
+				await channel.permissionOverwrites.edit(muteRole, {
+					SendMessages: false,
+					Speak: false,
+					AddReactions: false
+				});
 			}
 		}
 
