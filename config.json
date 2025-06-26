@@ -1,0 +1,12 @@
+{
+	"youtube": 
+	{
+	"callback": "https://tondomaine.fr/youtube",
+	"discordChannelId": "ID_DU_SALON_DISCORD",
+	"channelIds":
+	[
+		"UCxxxxxxx1",
+		"UCxxxxxxx2"
+	]
+	}
+}
