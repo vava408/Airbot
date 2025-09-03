@@ -1,36 +1,28 @@
-const db = require('../../connexion.js'); // Importez la connexion à la base de données
+const db = require('../../connexion.js');
 const Discord = require('discord.js');
 
 module.exports = {
-	name: 'mute', // Nom de la commande
-	description: 'Mute un utilisateur avec une durée et une raison. Utilisation : "!mute @utilisateur durée [raison]"',
+	name: 'mute',
+	description: 'Mute un utilisateur avec une raison. Utilisation : "!mute @utilisateur [raison]"',
 
 	async execute(message, args) {
-		// Vérifiez les permissions de l'utilisateur
 		if (!message.member.permissions.has(Discord.PermissionFlagsBits.ManageRoles)) {
 			return message.reply('Vous n\'avez pas la permission d\'utiliser cette commande.');
 		}
 
-		// Vérifiez si un utilisateur est mentionné
+		// Récupérer l'utilisateur mentionné
 		const user = message.mentions.members.first();
 		if (!user) {
 			return message.reply('Veuillez mentionner un utilisateur à mute.');
 		}
 
-		// Vérifiez si une durée est fournie
-		const duration = args[1];
-		if (!duration || isNaN(parseInt(duration))) {
-			return message.reply('Veuillez spécifier une durée en minutes.');
-		}
+		// Récupérer la raison (optionnelle)
+		const reason = args.slice(1).join(' ') || 'Aucune raison spécifiée';
 
-		// Récupérez la raison (optionnelle)
-		const reason = args.slice(2).join(' ') || 'Aucune raison spécifiée';
-
-		// Vérifiez si le rôle "Muted" existe, sinon créez-le
+		// Vérifie si le rôle "Muted" existe, sinon crée-le
 		let muteRole = message.guild.roles.cache.find(role => role.name === 'Muted');
 		if (!muteRole) {
 			try {
-				// Crée le rôle Muted
 				muteRole = await message.guild.roles.create({
 					name: 'Muted',
 					color: '#808080',
@@ -51,20 +43,11 @@ module.exports = {
 				}
 			} catch (err) {
 				console.error('Erreur lors de la création du rôle Muted :', err);
-				return message.reply('Une erreur s\'est produite lors de la création du rôle Muted.');
-			}
-		} else {
-			// S'assure que le rôle Muted a bien les permissions refusées partout
-			for (const channel of message.guild.channels.cache.values()) {
-				await channel.permissionOverwrites.edit(muteRole, {
-					SendMessages: false,
-					Speak: false,
-					AddReactions: false
-				});
+				return message.reply('Une erreur est survenue lors de la création du rôle Muted.');
 			}
 		}
 
-		// Ajoutez le rôle "Muted" à l'utilisateur
+		// Ajoute le rôle Muted à l'utilisateur
 		try {
 			await user.roles.add(muteRole, reason);
 		} catch (err) {
@@ -72,45 +55,21 @@ module.exports = {
 			return message.reply('Je n\'ai pas pu mute cet utilisateur. Vérifiez mes permissions.');
 		}
 
-		// Stockez les informations dans la base de données (table temporaire)
-		const tempQuery = `INSERT INTO mute (guild, \`user-mute\`, temps) VALUES (?, ?, ?)`;
-		const tempValues = [message.guild.id, user.id, duration];
-		db.query(tempQuery, tempValues, (err) => {
-			if (err) {
-				console.error('Erreur lors de l\'enregistrement du mute temporaire :', err);
-				return message.reply('Une erreur s\'est produite lors de l\'enregistrement du mute temporaire.');
-			}
-		});
-
-		// Stockez les informations dans la base de données (table définitive)
-		const definitiveQuery = `INSERT INTO info_mute (guild, \`user-mute\`, temps, reason, user) VALUES (?, ?, ?, ?, ?)`;
-		const definitiveValues = [
+		// Sauvegarde dans la base (si tu veux garder un historique)
+		const query = `INSERT INTO info_mute (guild, \`user-mute\`, temps, reason, user) VALUES (?, ?, ?, ?, ?)`;
+		const values = [
 			message.guild.id,
 			user.id,
 			new Date(),
 			reason,
 			message.author.id
 		];
-		db.query(definitiveQuery, definitiveValues, (err) => {
+		db.query(query, values, (err) => {
 			if (err) {
-				console.error('Erreur lors de l\'enregistrement du mute définitif :', err);
-				return message.reply('Une erreur s\'est produite lors de l\'enregistrement du mute définitif.');
+				console.error('Erreur lors de l\'enregistrement du mute :', err);
 			}
 		});
 
-		// Réponse de confirmation
-		message.reply(`${user.user.tag} a été mute pour ${duration} minute(s) avec la raison : "${reason}".`);
-
-		// Retirez le rôle "Muted" après la durée spécifiée
-		setTimeout(async () => {
-			if (user.roles.cache.has(muteRole.id)) {
-				try {
-					await user.roles.remove(muteRole, 'Fin du mute');
-					message.channel.send(`${user.user.tag} n\'est plus mute.`);
-				} catch (err) {
-					console.error('Erreur lors de la suppression du rôle Muted :', err);
-				}
-			}
-		}, parseInt(duration) * 60 * 1000); // Convertir les minutes en millisecondes
+		message.reply(`${user.user.tag} a été mute. Raison : "${reason}"`);
 	}
 };
