@@ -24,7 +24,7 @@ module.exports = {
 		await message.channel.send(`**${joueur1.username}** et **${joueur2.username}**, tapez \`accepter\` pour accepter le défi ou \`refuser\` pour le refuser.`);
 
 		const filterAccept = m => [joueur1.id, joueur2.id].includes(m.author.id) && ['accepter', 'refuser'].includes(m.content.toLowerCase());
-		const collectorAccept = message.channel.createMessageCollector({ filter: filterAccept, time: 60000 });
+		const collectorAccept = message.channel.createMessageCollector({ filter: filterAccept, time: 600000 });
 
 		let accepted = false;
 		collectorAccept.on('collect', m => {
