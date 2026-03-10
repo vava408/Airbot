@@ -9,11 +9,18 @@ module.exports = {
 		const user = message.mentions.users.first() || message.author; // Récupère l'utilisateur mentionné ou l'auteur du message
 
 		// Récupère le niveau et l'XP de l'utilisateur depuis la base de données
-		db.query('SELECT level, xp FROM levels WHERE user = ?', [user.id], async (err, results) => {
-			if (err) {
-				console.error(err);
-				return message.reply('Erreur lors de la récupération des données.');
-			}
+db.query(
+    'SELECT level, xp FROM levels WHERE user = ? AND guild = ?',
+    [user.id, message.guild.id],
+    async (err, results) => {
+        if (err) {
+            console.error(err);
+            return message.reply('Erreur lors de la récupération des données.');
+        }
+
+        // Ici tu peux traiter results
+    }
+);
 
 			// Valeurs par défaut si aucune donnée trouvée
 			let level = 0;
