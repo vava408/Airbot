@@ -85,7 +85,7 @@ app.post('/webhook', express.raw({ type: '*/*' }), (req, res) => {
 		}
 
 		// Redémarrage du bot
-		exec("pm2 restart airbot", (err) => {
+		exec("pm2 restart Airbot", (err) => {
 			if (err) {
 				console.error("Erreur PM2 :", err.message);
 				return;
